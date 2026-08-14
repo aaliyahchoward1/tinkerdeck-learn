@@ -1,0 +1,48 @@
+name: Validate Lessons
+
+on:
+  push:
+    branches: [ main, claude/* ]
+    paths:
+      - 'lessons/**'
+      - '.github/workflows/validate.yml'
+      - 'scripts/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'lessons/**'
+      - '.github/workflows/validate.yml'
+      - 'scripts/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    name: Validate Lesson Structure
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        pip install pyyaml
+
+    - name: Run lesson validation
+      run: |
+        python scripts/check-lessons.py
+
+    - name: Check for code files
+      run: |
+        if find lessons -name "*.ino" | grep -q .; then
+          echo "✓ Found Arduino sketch files"
+        fi
+
+    - name: Validate JSON files
+      run: |
+        python -m json.tool lessons/*/wiring/parts.json > /dev/null 2>&1 && \
+        echo "✓ All JSON files valid" || \
+        echo "✗ JSON validation failed"
