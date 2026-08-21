@@ -1,0 +1,38 @@
+id: "04-mini-display"
+title: "Mini Display: Showing Data on an LCD Screen"
+difficulty: "Intermediate"
+duration_minutes: 35
+objectives:
+  - Understand I2C (Two-Wire) communication
+  - Connect and control an LCD display
+  - Display text and sensor data
+  - Update display in real-time
+  - Understand display libraries
+skills:
+  - I2C communication
+  - Library usage (LiquidCrystal_I2C)
+  - Display control
+  - String formatting
+  - Real-time updates
+prerequisites:
+  - "01-blink"
+  - "03-sensor"
+materials:
+  - Arduino Uno
+  - USB cable
+  - 16x2 or 20x4 LCD display with I2C module
+  - Optional: temperature sensor (DHT11, LM35) or other sensor
+  - Breadboard
+  - Jumper wires
+concepts:
+  - I2C protocol (SDA/SCL)
+  - Display memory layout
+  - LCD initialization
+  - Cursor positioning
+  - Library imports and functions
+tags:
+  - intermediate
+  - display
+  - i2c
+  - communication
+description: "Display text and sensor data on an LCD screen using I2C communication. Build a data display project."

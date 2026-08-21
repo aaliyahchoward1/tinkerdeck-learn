@@ -1,0 +1,66 @@
+{
+  "components": [
+    {
+      "id": "arduino-uno",
+      "name": "Arduino Uno",
+      "quantity": 1,
+      "description": "Microcontroller board"
+    },
+    {
+      "id": "push-button",
+      "name": "Push Button (Momentary Switch)",
+      "quantity": 1,
+      "description": "Normally open push button",
+      "specifications": {
+        "type": "SPST momentary",
+        "contact_rating": "50mA at 24V"
+      }
+    },
+    {
+      "id": "resistor-10k",
+      "name": "Resistor (10kΩ)",
+      "quantity": 1,
+      "description": "Pull-down resistor for button",
+      "specifications": {
+        "resistance": "10000 ohms",
+        "power": "0.25W",
+        "tolerance": "5%"
+      }
+    },
+    {
+      "id": "led-5mm",
+      "name": "LED (5mm)",
+      "quantity": 1,
+      "description": "Light-emitting diode, any color"
+    },
+    {
+      "id": "resistor-220",
+      "name": "Resistor (220Ω)",
+      "quantity": 1,
+      "description": "Current-limiting resistor for LED"
+    },
+    {
+      "id": "breadboard",
+      "name": "Breadboard",
+      "quantity": 1,
+      "description": "Solderless breadboard for prototyping"
+    },
+    {
+      "id": "jumper-wires",
+      "name": "Jumper Wires",
+      "quantity": 6,
+      "description": "Hookup wires for connections"
+    },
+    {
+      "id": "usb-cable",
+      "name": "USB Cable (Type A to Type B)",
+      "quantity": 1,
+      "description": "For programming and powering the Arduino"
+    }
+  ],
+  "cost_estimate": {
+    "currency": "USD",
+    "total": 18,
+    "notes": "Slightly more than Lesson 1 due to button and pull-down resistor"
+  }
+}
