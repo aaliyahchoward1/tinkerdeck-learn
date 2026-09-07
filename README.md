@@ -3,6 +3,13 @@
 [![GitHub License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Lessons](https://img.shields.io/badge/lessons-4-brightgreen.svg)]()
 [![Arduino](https://img.shields.io/badge/platform-Arduino%20Uno-blue.svg)]()
+[![Status](https://img.shields.io/badge/status-v1.0.0-success.svg)](CHANGELOG.md)
+[![Beginner Friendly](https://img.shields.io/badge/difficulty-Beginner-green.svg)]()
+[![CI/CD](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-blue.svg)](#)
+[![Maintenance](https://img.shields.io/badge/maintained%3F-yes-green.svg)]()
+[![Made with ❤️](https://img.shields.io/badge/made%20with-%E2%9D%A4%EF%B8%8F-red.svg)]()
+
+An open-source Arduino learning platform with hands-on lessons for beginners.
 
 An open-source Arduino learning platform with hands-on lessons for beginners. Start with the fundamentals and progress to building real interactive projects.
 
