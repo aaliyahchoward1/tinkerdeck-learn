@@ -77,7 +77,7 @@ Without the pull-down resistor:
 - This causes unpredictable behavior
 - The 10kΩ resistor fixes this by ensuring a known LOW state
 
-The pull-down resistor is always needed for digital inputs!
+A pull-down (or pull-up) resistor is needed whenever a digital input pin could otherwise be left floating — as with this external button wiring.
 
 ## Alternative: Pull-Up Configuration
 
