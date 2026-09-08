@@ -1,0 +1,55 @@
+{
+  "components": [
+    {
+      "id": "arduino-uno",
+      "name": "Arduino Uno",
+      "quantity": 1,
+      "description": "Microcontroller board"
+    },
+    {
+      "id": "lcd-i2c",
+      "name": "16x2 LCD Display with I2C Module",
+      "quantity": 1,
+      "description": "Character LCD with integrated I2C converter",
+      "specifications": {
+        "type": "16 characters × 2 rows",
+        "interface": "I2C",
+        "voltage": "5V",
+        "common_addresses": ["0x27", "0x3F"]
+      },
+      "alternatives": {
+        "20x4_display": "20 characters × 4 rows (use same wiring, different I2C address)"
+      }
+    },
+    {
+      "id": "temperature-sensor-optional",
+      "name": "Temperature Sensor (Optional)",
+      "quantity": 0,
+      "description": "DHT11 or LM35 to display temperature data",
+      "notes": "Not required for basic lesson; add for Challenge 1"
+    },
+    {
+      "id": "breadboard",
+      "name": "Breadboard",
+      "quantity": 1,
+      "description": "Solderless breadboard for prototyping"
+    },
+    {
+      "id": "jumper-wires-i2c",
+      "name": "Jumper Wires (4 minimum)",
+      "quantity": 4,
+      "description": "For connecting I2C display to Arduino"
+    },
+    {
+      "id": "usb-cable",
+      "name": "USB Cable (Type A to Type B)",
+      "quantity": 1,
+      "description": "For programming and powering the Arduino"
+    }
+  ],
+  "cost_estimate": {
+    "currency": "USD",
+    "total": 30,
+    "notes": "16x2 LCD with I2C module: ~$5-10. Temperature sensors: ~$3-5 (optional)"
+  }
+}
