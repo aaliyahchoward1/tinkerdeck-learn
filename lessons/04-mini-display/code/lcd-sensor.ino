@@ -51,18 +51,20 @@ void loop() {
   // Control LED brightness
   analogWrite(LED_PIN, brightness);
 
-  // Clear and update display
-  lcd.clear();
+  // Update display (overwrite with padded spaces instead of lcd.clear()
+  // to avoid visible flicker on real hardware)
 
   // Line 1: Sensor reading
   lcd.setCursor(0, 0);
   lcd.print("Sensor: ");
   lcd.print(sensorValue);
+  lcd.print("    "); // pad to clear leftover digits from a longer previous value
 
   // Line 2: Brightness level
   lcd.setCursor(0, 1);
   lcd.print("LED: ");
   lcd.print(brightness);
+  lcd.print("    "); // pad to clear leftover digits from a longer previous value
 
   // Also print to Serial for monitoring
   Serial.print("Sensor: ");
