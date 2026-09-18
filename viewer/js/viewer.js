@@ -727,7 +727,6 @@ function loadLesson(lessonNum) {
     validatePositions();
 }
 
-// Animation loop
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
