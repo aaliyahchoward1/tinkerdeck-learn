@@ -1,0 +1,40 @@
+id: "03-sensor"
+title: "Analog Sensors: Reading the Real World"
+difficulty: "Intermediate"
+duration_minutes: 30
+objectives:
+  - Understand analog input and PWM output
+  - Read continuously varying sensor values
+  - Convert sensor readings to useful information
+  - Control LED brightness based on sensor input
+  - Learn about calibration and sensor noise
+skills:
+  - Analog input (analogRead)
+  - PWM output (analogWrite)
+  - Sensor calibration
+  - Data mapping
+  - Real-world interfacing
+prerequisites:
+  - "01-blink"
+  - "02-button-input"
+materials:
+  - Arduino Uno
+  - USB cable
+  - Analog sensor (light sensor/photoresistor OR potentiometer)
+  - LED (5mm)
+  - 220Ω resistor
+  - 10kΩ resistor (if using light sensor)
+  - Breadboard
+  - Jumper wires
+concepts:
+  - Analog signals vs digital
+  - PWM (Pulse Width Modulation)
+  - analogRead() and analogWrite()
+  - Sensor calibration
+  - Map() function
+tags:
+  - intermediate
+  - analog-input
+  - pwm
+  - sensor
+description: "Read analog values from a sensor and control LED brightness. Bridge the gap between digital and analog worlds."

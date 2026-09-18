@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TinkerDeck Learn - 3D Circuit Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        #canvas {
+            flex: 1;
+            display: block;
+        }
+
+        .sidebar {
+            width: 320px;
+            background: #1e293b;
+            border-left: 1px solid #334155;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        .sidebar h1 {
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+
+        .lesson-title {
+            font-size: 14px;
+            color: #94a3b8;
+            margin-bottom: 16px;
+        }
+
+        .info-section {
+            margin-bottom: 24px;
+        }
+
+        .info-section h2 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #cbd5e1;
+        }
+
+        .component-list {
+            list-style: none;
+        }
+
+        .component-list li {
+            font-size: 13px;
+            padding: 6px 0;
+            color: #cbd5e1;
+        }
+
+        .component-list li strong {
+            color: #f1f5f9;
+        }
+
+        .controls {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #334155;
+        }
+
+        .controls p {
+            font-size: 12px;
+            color: #94a3b8;
+            line-height: 1.6;
+        }
+
+        .lesson-nav {
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #334155;
+        }
+
+        .lesson-nav button {
+            display: block;
+            width: 100%;
+            padding: 8px 12px;
+            margin-bottom: 8px;
+            background: #334155;
+            border: 1px solid #475569;
+            color: #e2e8f0;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s;
+        }
+
+        .lesson-nav button:hover {
+            background: #475569;
+        }
+
+        .lesson-nav button.active {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <canvas id="canvas"></canvas>
+        <div class="sidebar">
+            <h1>TinkerDeck Learn</h1>
+            <div class="lesson-title" id="lesson-title">Lesson 1: Blink</div>
+
+            <div class="info-section">
+                <h2>Components</h2>
+                <ul class="component-list" id="component-list"></ul>
+            </div>
+
+            <div class="info-section">
+                <h2>Connections</h2>
+                <ul class="component-list" id="connection-list"></ul>
+            </div>
+
+            <div class="controls">
+                <p><strong>Controls:</strong></p>
+                <p>🔴 <strong>Drag components</strong> to place<br>Scroll to zoom<br>Rotate/pan with right-click</p>
+                <p><small>Components snap to 0.5-unit grid. Green = correct, Red = incorrect.</small></p>
+            </div>
+
+            <div id="validation-status"></div>
+
+            <div class="lesson-nav">
+                <button class="active" onclick="loadLesson(1)">Lesson 1: Blink</button>
+                <button onclick="loadLesson(2)">Lesson 2: Button Input</button>
+                <button onclick="loadLesson(3)">Lesson 3: Sensor</button>
+                <button onclick="loadLesson(4)">Lesson 4: LCD Display</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@r128/examples/js/controls/OrbitControls.js"></script>
+    <script src="js/viewer.js"></script>
+</body>
+</html>

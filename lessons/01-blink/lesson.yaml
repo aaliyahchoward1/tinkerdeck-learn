@@ -1,0 +1,31 @@
+id: "01-blink"
+title: "Blink: Your First Arduino Program"
+difficulty: "Beginner"
+duration_minutes: 15
+objectives:
+  - Understand the basic structure of an Arduino sketch
+  - Learn how to use digitalWrite() to control an LED
+  - Understand the difference between HIGH and LOW
+  - Upload and run your first program
+skills:
+  - Arduino syntax
+  - Digital output
+  - Program flow
+prerequisites: []
+materials:
+  - Arduino Uno
+  - USB cable
+  - LED (5mm, any color)
+  - 220Ω resistor
+  - Breadboard
+  - Jumper wires
+concepts:
+  - Setup and loop functions
+  - Digital pins
+  - millisecond delays
+  - Basic logic
+tags:
+  - beginner
+  - digital-output
+  - led
+description: "Make an LED blink on and off. This is the 'Hello World' of Arduino - the perfect first project!"

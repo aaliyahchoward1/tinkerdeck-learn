@@ -1,0 +1,70 @@
+{
+  "components": [
+    {
+      "id": "arduino-uno",
+      "name": "Arduino Uno",
+      "quantity": 1,
+      "description": "Microcontroller board"
+    },
+    {
+      "id": "potentiometer",
+      "name": "Potentiometer (10kΩ) OR Light Sensor (Photoresistor)",
+      "quantity": 1,
+      "description": "Analog sensor - choose one:",
+      "options": {
+        "potentiometer": {
+          "name": "Rotary Potentiometer",
+          "value": "10kΩ",
+          "description": "Easier to test; turn knob to adjust"
+        },
+        "photoresistor": {
+          "name": "Photoresistor (CdS cell)",
+          "value": "5kΩ-200kΩ varying",
+          "description": "More interesting; responds to light"
+        }
+      }
+    },
+    {
+      "id": "resistor-10k",
+      "name": "Resistor (10kΩ)",
+      "quantity": 1,
+      "description": "Pull-down for photoresistor (if using photoresistor)",
+      "notes": "Not needed if using potentiometer"
+    },
+    {
+      "id": "led-5mm",
+      "name": "LED (5mm)",
+      "quantity": 1,
+      "description": "Light-emitting diode, any color"
+    },
+    {
+      "id": "resistor-220",
+      "name": "Resistor (220Ω)",
+      "quantity": 1,
+      "description": "Current-limiting resistor for LED"
+    },
+    {
+      "id": "breadboard",
+      "name": "Breadboard",
+      "quantity": 1,
+      "description": "Solderless breadboard for prototyping"
+    },
+    {
+      "id": "jumper-wires",
+      "name": "Jumper Wires",
+      "quantity": 8,
+      "description": "Hookup wires for connections"
+    },
+    {
+      "id": "usb-cable",
+      "name": "USB Cable (Type A to Type B)",
+      "quantity": 1,
+      "description": "For programming and powering the Arduino"
+    }
+  ],
+  "cost_estimate": {
+    "currency": "USD",
+    "total": 25,
+    "notes": "Potentiometer ~$2, Photoresistor ~$1, other components reused from previous lessons"
+  }
+}

@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TinkerDeck Learn - 3D Circuit Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1a1f2e 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            max-width: 600px;
+            text-align: center;
+            padding: 40px 20px;
+        }
+        h1 {
+            font-size: 48px;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .subtitle {
+            font-size: 20px;
+            color: #94a3b8;
+            margin-bottom: 32px;
+            line-height: 1.6;
+        }
+        .features {
+            background: rgba(30, 41, 59, 0.6);
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 32px;
+            margin-bottom: 32px;
+            text-align: left;
+        }
+        .features h2 {
+            font-size: 18px;
+            margin-bottom: 16px;
+            color: #cbd5e1;
+        }
+        .features ul {
+            list-style: none;
+            font-size: 14px;
+            color: #cbd5e1;
+            line-height: 2;
+        }
+        .features li:before {
+            content: "✓ ";
+            color: #10b981;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        .cta-button {
+            display: inline-block;
+            padding: 14px 32px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
+        }
+        .lessons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+            margin-top: 24px;
+        }
+        .lesson-btn {
+            padding: 10px 16px;
+            background: #1e293b;
+            border: 1px solid #475569;
+            color: #e2e8f0;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+        .lesson-btn:hover {
+            background: #334155;
+            border-color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>TinkerDeck Learn</h1>
+        <p class="subtitle">Interactive 3D Circuit Visualization for Electronics Education</p>
+
+        <div class="features">
+            <h2>What You Get</h2>
+            <ul>
+                <li>4 interactive circuit lessons</li>
+                <li>3D drag-and-drop component placement</li>
+                <li>Real-time validation feedback</li>
+                <li>Visual wire connections</li>
+                <li>Works on desktop and tablet</li>
+            </ul>
+        </div>
+
+        <button class="cta-button" onclick="window.location.href='/tinkerdeck-learn/viewer/'">
+            Launch Viewer →
+        </button>
+
+        <div class="lessons">
+            <a href="/tinkerdeck-learn/viewer/?lesson=1" class="lesson-btn">Lesson 1: Blink</a>
+            <a href="/tinkerdeck-learn/viewer/?lesson=2" class="lesson-btn">Lesson 2: Button</a>
+            <a href="/tinkerdeck-learn/viewer/?lesson=3" class="lesson-btn">Lesson 3: Sensor</a>
+            <a href="/tinkerdeck-learn/viewer/?lesson=4" class="lesson-btn">Lesson 4: LCD</a>
+        </div>
+    </div>
+</body>
+</html>

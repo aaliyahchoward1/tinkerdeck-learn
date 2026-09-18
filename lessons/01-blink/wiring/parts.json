@@ -1,0 +1,59 @@
+{
+  "components": [
+    {
+      "id": "arduino-uno",
+      "name": "Arduino Uno",
+      "quantity": 1,
+      "description": "Microcontroller board",
+      "datasheet": "https://store.arduino.cc/arduino-uno-rev3"
+    },
+    {
+      "id": "led-5mm",
+      "name": "LED (5mm)",
+      "quantity": 1,
+      "description": "Light-emitting diode, any color",
+      "specifications": {
+        "voltage": "2-3V",
+        "current": "20mA",
+        "forward_voltage": "2V"
+      }
+    },
+    {
+      "id": "resistor-220",
+      "name": "Resistor (220Ω)",
+      "quantity": 1,
+      "description": "Current-limiting resistor for LED",
+      "specifications": {
+        "resistance": "220 ohms",
+        "power": "0.25W",
+        "tolerance": "5%"
+      }
+    },
+    {
+      "id": "breadboard",
+      "name": "Breadboard",
+      "quantity": 1,
+      "description": "Solderless breadboard for prototyping",
+      "specifications": {
+        "holes": 400
+      }
+    },
+    {
+      "id": "jumper-wires",
+      "name": "Jumper Wires",
+      "quantity": 4,
+      "description": "Hookup wires for connections"
+    },
+    {
+      "id": "usb-cable",
+      "name": "USB Cable (Type A to Type B)",
+      "quantity": 1,
+      "description": "For programming and powering the Arduino"
+    }
+  ],
+  "cost_estimate": {
+    "currency": "USD",
+    "total": 15,
+    "notes": "Prices vary; many starter kits include all components"
+  }
+}

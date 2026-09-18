@@ -1,0 +1,36 @@
+id: "02-button-input"
+title: "Button Input: Making Your Arduino Interactive"
+difficulty: "Beginner"
+duration_minutes: 20
+objectives:
+  - Understand digital input and reading pin values
+  - Learn conditional logic (if/else statements)
+  - Use buttons to control program behavior
+  - Understand debouncing and timing issues
+skills:
+  - Digital input
+  - Conditional statements
+  - Logic flow
+  - User interaction
+prerequisites:
+  - "01-blink"
+materials:
+  - Arduino Uno
+  - USB cable
+  - Push button (momentary switch)
+  - 10kΩ resistor (pull-down)
+  - LED (5mm)
+  - 220Ω resistor
+  - Breadboard
+  - Jumper wires
+concepts:
+  - digitalRead()
+  - if/else statements
+  - Pull-down resistors
+  - Debouncing
+  - Button states
+tags:
+  - beginner
+  - digital-input
+  - interaction
+description: "Make your Arduino respond to button presses. Control an LED with a button switch."
