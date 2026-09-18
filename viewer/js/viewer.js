@@ -1,5 +1,5 @@
 // TinkerDeck Learn - 3D Circuit Viewer
-// Passive viewer (rotate/zoom) - will be enhanced to interactive later
+// Phase 2: Interactive drag-and-drop component placement
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1a1f2e);
@@ -44,6 +44,93 @@ scene.add(directionalLight);
 const gridHelper = new THREE.GridHelper(60, 60, 0x2d3748, 0x1a202c);
 gridHelper.position.y = -0.5;
 scene.add(gridHelper);
+
+// Drag and drop system
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+let draggingObject = null;
+let draggingPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+let draggingOffset = new THREE.Vector3();
+const dragPoint = new THREE.Vector3();
+
+// Disable orbit controls while dragging
+canvas.addEventListener('mousedown', (event) => {
+    // Only drag with left mouse button
+    if (event.button !== 0) return;
+
+    // Calculate mouse position in normalized device coordinates
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    // Cast ray and find intersected objects
+    raycaster.setFromCamera(mouse, camera);
+
+    // Only check draggable objects (components, not breadboard/arduino base)
+    if (currentScene) {
+        const allObjects = [];
+        currentScene.traverse((obj) => {
+            if (obj.userData.draggable) {
+                allObjects.push(obj);
+            }
+        });
+
+        const intersects = raycaster.intersectObjects(allObjects, true);
+        if (intersects.length > 0) {
+            // Find the top-level draggable group
+            let obj = intersects[0].object;
+            while (obj.parent && !obj.userData.draggable) {
+                obj = obj.parent;
+            }
+
+            if (obj.userData.draggable) {
+                draggingObject = obj;
+                controls.enableRotate = false;
+
+                // Calculate offset from drag point to object center
+                raycaster.ray.intersectPlane(draggingPlane, dragPoint);
+                draggingOffset.copy(draggingObject.position).sub(dragPoint);
+
+                // Visual feedback
+                draggingObject.userData.originalScale = draggingObject.scale.clone();
+                draggingObject.scale.multiplyScalar(1.1);
+            }
+        }
+    }
+});
+
+canvas.addEventListener('mousemove', (event) => {
+    if (!draggingObject) return;
+
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycaster.setFromCamera(mouse, camera);
+    raycaster.ray.intersectPlane(draggingPlane, dragPoint);
+
+    // Snap to grid (0.5 unit increments on XZ plane, keep Y fixed at 2)
+    const snapped = new THREE.Vector3(
+        Math.round(dragPoint.x * 2) / 2,
+        draggingObject.position.y,
+        Math.round(dragPoint.z * 2) / 2
+    ).add(draggingOffset);
+
+    draggingObject.position.copy(snapped);
+});
+
+canvas.addEventListener('mouseup', () => {
+    if (draggingObject) {
+        controls.enableRotate = true;
+
+        // Restore scale
+        if (draggingObject.userData.originalScale) {
+            draggingObject.scale.copy(draggingObject.userData.originalScale);
+        }
+
+        draggingObject = null;
+    }
+});
 
 let currentLesson = 1;
 let currentScene = null;
@@ -102,6 +189,7 @@ function createBreadboard() {
 
 function createLED(color = 0xff0000) {
     const group = new THREE.Group();
+    group.userData.draggable = true;
 
     // LED bulb (dome)
     const bulb = new THREE.Mesh(
@@ -136,6 +224,7 @@ function createLED(color = 0xff0000) {
 
 function createResistor() {
     const group = new THREE.Group();
+    group.userData.draggable = true;
 
     // Body (beige cylinder)
     const body = new THREE.Mesh(
@@ -174,6 +263,7 @@ function createResistor() {
 
 function createButton() {
     const group = new THREE.Group();
+    group.userData.draggable = true;
 
     // Main button (black square)
     const button = new THREE.Mesh(
