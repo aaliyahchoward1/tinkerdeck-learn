@@ -47,6 +47,27 @@ Each lesson includes:
 
 **Time to first success:** ~15 minutes
 
+## 🎨 3D Circuit Viewer
+
+See your circuits come to life in **interactive 3D**!
+
+We've built a 3D visualization tool that shows each lesson's circuit layout from every angle. Perfect for:
+- Visual learners who want to see component placement
+- Understanding spatial relationships before wiring
+- Seeing how everything fits on the breadboard
+- Reviewing circuits without hardware
+
+### [👉 Open 3D Viewer (All 4 Lessons)](viewer/)
+
+**Features:**
+- Rotate, zoom, pan each circuit
+- Switch instantly between lessons
+- Component information sidebar
+- Auto-rotating overview mode
+- Works in any modern browser (no installation needed)
+
+Coming soon: Interactive mode where you'll drag components and validate connections!
+
 ## 📚 Lesson Path & Progression
 
 ### Learning Flow
