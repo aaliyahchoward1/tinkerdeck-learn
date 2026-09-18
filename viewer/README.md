@@ -12,20 +12,28 @@ This viewer provides a **passive 3D view** of each lesson's breadboard circuit, 
 
 ## Features
 
-### Current (v1.0 - Passive)
+### Current (v3.0 - Validated & Interactive)
 - ✅ 3D geometry models for all components (Arduino, breadboard, LEDs, resistors, buttons, LCD)
 - ✅ All 4 lesson scenes
 - ✅ Orbit camera controls (rotate, zoom, pan)
 - ✅ Auto-rotating view
 - ✅ Component and connection sidebar
 - ✅ Lesson navigation
+- ✅ **Drag-and-drop component placement** (Phase 2)
+- ✅ **Component position validation** - green when correct, red when incorrect (Phase 3)
+- ✅ **Validation status UI** - shows real-time correctness count (Phase 3)
+- ✅ **Wire visualization** - draws connections between correctly placed components (Phase 3)
+- ✅ **Bounding box outlines** - visual feedback for validation state (Phase 3)
 
-### Planned (v2.0 - Interactive)
-- 🔲 Drag components to arrange them
+### Planned (v4.0 - Advanced)
+- 🔲 Connection point snapping (snap to connection points when nearby)
 - 🔲 Click component → highlight wiring path
-- 🔲 Validate correct connections
 - 🔲 Wire connections manually (teaching mode)
 - 🔲 Export circuit diagrams
+- 🔲 Real GLTF models from Sketchfab/Thingiverse
+- 🔲 Animation (wire tracing, LED blinking)
+- 🔲 Multi-angle breakdown views
+- 🔲 AR integration
 
 ## Usage
 
@@ -40,11 +48,13 @@ python3 -m http.server 8000
 ```
 
 ### Controls
-- **Left Mouse Drag**: Rotate view
+- **Left Mouse Drag on Component**: Drag component to place (snaps to 0.5-unit grid)
+- **Left Mouse Drag on Canvas**: Rotate view
 - **Scroll**: Zoom in/out
 - **Right Mouse Drag**: Pan the camera
-- **Auto-rotate**: Enabled by default (click anywhere to pause)
+- **Auto-rotate**: Enabled by default (disabled while dragging)
 - **Lesson buttons**: Switch between 4 lessons
+- **Validation Status**: Shows below controls - displays correct/total components
 
 ## Project Structure
 
@@ -83,14 +93,35 @@ Each component is built from basic Three.js geometries:
 - **FPS**: 60 on desktop, 30-60 on mobile
 - **Memory**: ~50MB (Three.js + scene geometry)
 
+## Implementation Details
+
+### Validation System (Phase 3)
+- **Position Matching**: Each lesson defines expected component positions
+- **Tolerance**: Components within 1 unit of expected position = correct
+- **Visual Feedback**: 
+  - Green wireframe outline = correct placement
+  - Red wireframe outline = incorrect placement
+- **Real-time Updates**: Validation runs after each drag operation
+
+### Wire Visualization (Phase 3)
+- Draws lines between correctly-placed components
+- Color-coded per connection type (red, green, yellow, cyan, etc.)
+- Only visible when both endpoints are correctly placed
+- Updates in real-time as components are positioned
+
+### Component Type System
+- Each component tagged with `userData.componentType` (led, resistor, button, sensor, pulldown, lcd)
+- Enables smart matching for validation and wire drawing
+- Extensible for future component types
+
 ## Future Enhancements
 
-### Phase 2 (Interactive)
-- Drag-and-drop component placement
-- Click-to-highlight wiring
-- Connection validation
+### Phase 4 (Connection Snapping)
+- Snap to connection points when dragging nearby
+- Show connection point indicators
+- Force correct orientation/alignment
 
-### Phase 3 (Advanced)
+### Phase 5 (Advanced)
 - Real GLTF models from Sketchfab/Thingiverse
 - Animation (wire tracing, LED blinking)
 - Multi-angle breakdown views

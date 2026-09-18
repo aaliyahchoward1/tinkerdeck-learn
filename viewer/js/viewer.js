@@ -1,5 +1,5 @@
 // TinkerDeck Learn - 3D Circuit Viewer
-// Phase 2: Interactive drag-and-drop component placement
+// Phase 3: Validation and wire visualization
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1a1f2e);
@@ -128,12 +128,204 @@ canvas.addEventListener('mouseup', () => {
             draggingObject.scale.copy(draggingObject.userData.originalScale);
         }
 
+        validatePositions();
         draggingObject = null;
     }
 });
 
 let currentLesson = 1;
 let currentScene = null;
+let wireLines = [];
+let validationOverlays = [];
+
+// Tolerance for position matching (0.5 units = half grid cell)
+const POSITION_TOLERANCE = 1;
+
+// Component connection points and correct positions per lesson
+const correctPositions = {
+    1: { // Lesson 1: Blink
+        'led': { pos: new THREE.Vector3(8, 2, -2), name: 'Red LED' },
+        'resistor': { pos: new THREE.Vector3(8, 2, 2), name: '220Ω Resistor' }
+    },
+    2: { // Lesson 2: Button Input
+        'led': { pos: new THREE.Vector3(6, 2, 2), name: 'Red LED' },
+        'resistor': { pos: new THREE.Vector3(8, 2, 2), name: '220Ω Resistor' },
+        'button': { pos: new THREE.Vector3(10, 1, -2), name: 'Button' },
+        'pulldown': { pos: new THREE.Vector3(8, 2, -2), name: '10kΩ Pull-down' }
+    },
+    3: { // Lesson 3: Sensor
+        'led': { pos: new THREE.Vector3(8, 2, 2), name: 'Orange LED' },
+        'sensor': { pos: new THREE.Vector3(4, 2, -2), name: 'Analog Sensor' }
+    },
+    4: { // Lesson 4: LCD Display
+        'lcd': { pos: new THREE.Vector3(0, 3, 0), name: 'LCD Display' }
+    }
+};
+
+// Component type identification
+function getComponentType(obj) {
+    if (!obj.userData) return null;
+    if (obj.userData.componentType) return obj.userData.componentType;
+
+    // Try to identify by structure
+    const children = obj.children ? obj.children.length : 0;
+    const hasSphericalBulb = obj.children && obj.children.some(c => c.geometry && c.geometry.type === 'SphereGeometry');
+
+    return null;
+}
+
+// Validate component positions
+function validatePositions() {
+    const lesson = lessons[currentLesson];
+    const correct = correctPositions[currentLesson];
+    if (!correct) return;
+
+    // Clear previous validation
+    validationOverlays.forEach(overlay => scene.remove(overlay));
+    validationOverlays = [];
+
+    // Check each component
+    currentScene.traverse((obj) => {
+        if (!obj.userData.draggable || obj === currentScene) return;
+
+        let validationState = 'unknown';
+        const objPos = obj.position;
+
+        // Check against correct positions
+        for (const [key, data] of Object.entries(correct)) {
+            const expectedPos = data.pos;
+            const distance = objPos.distanceTo(expectedPos);
+
+            if (distance < POSITION_TOLERANCE) {
+                validationState = 'correct';
+                addValidationOverlay(obj, 'correct');
+                break;
+            } else if (distance < POSITION_TOLERANCE * 3) {
+                validationState = 'close';
+            }
+        }
+
+        if (validationState === 'unknown' || validationState === 'close') {
+            addValidationOverlay(obj, 'incorrect');
+        }
+
+        obj.userData.validationState = validationState;
+    });
+
+    drawWires();
+    updateValidationUI();
+}
+
+// Add visual overlay for validation
+function addValidationOverlay(obj, state) {
+    const outlineColor = state === 'correct' ? 0x00ff00 : 0xff4444;
+
+    // Create a bounding box for the object
+    const box = new THREE.Box3().setFromObject(obj);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+
+    const outlineGeometry = new THREE.BoxGeometry(size.x, size.y, size.z);
+    const outlineMaterial = new THREE.MeshBasicMaterial({
+        color: outlineColor,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.5,
+        side: THREE.BackSide
+    });
+
+    const outline = new THREE.Mesh(outlineGeometry, outlineMaterial);
+    outline.position.copy(center);
+
+    scene.add(outline);
+    validationOverlays.push(outline);
+}
+
+// Update validation status UI
+function updateValidationUI() {
+    let correct = 0;
+    let total = 0;
+
+    currentScene.traverse((obj) => {
+        if (!obj.userData.draggable) return;
+        total++;
+        if (obj.userData.validationState === 'correct') correct++;
+    });
+
+    const validationDiv = document.getElementById('validation-status');
+    if (validationDiv) {
+        validationDiv.innerHTML = `
+            <div style="padding: 8px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; margin-top: 8px;">
+                <strong>✓ Validation: ${correct}/${total} correct</strong>
+                ${correct === total ? '<span style="color: #00ff00;"> - All correct! ✨</span>' : ''}
+            </div>
+        `;
+    }
+}
+
+// Draw wires between components
+function drawWires() {
+    wireLines.forEach(line => scene.remove(line));
+    wireLines = [];
+
+    const lesson = lessons[currentLesson];
+
+    // Lesson-specific wire definitions (from and to component types)
+    const wireMaps = {
+        1: [
+            // Lesson 1: Blink - simple LED circuit
+            ['arduino', 'resistor', 0xffa500], // Orange: power line
+            ['resistor', 'led', 0xff0000]      // Red: LED connection
+        ],
+        2: [
+            // Lesson 2: Button - more complex
+            ['button', 'led', 0x00ff00],       // Green: button to LED
+            ['resistor', 'led', 0xff0000]      // Red: current limiting
+        ],
+        3: [
+            // Lesson 3: Sensor
+            ['sensor', 'led', 0xffff00]        // Yellow: sensor to LED
+        ],
+        4: [
+            // Lesson 4: LCD
+            ['arduino', 'lcd', 0x00ccff]       // Cyan: I2C connection
+        ]
+    };
+
+    const wires = wireMaps[currentLesson] || [];
+
+    // Find components and draw wires between them
+    currentScene.traverse((fromObj) => {
+        if (!fromObj.userData.draggable) return;
+
+        wires.forEach(([fromType, toType, color]) => {
+            currentScene.traverse((toObj) => {
+                if (!toObj.userData.draggable || fromObj === toObj) return;
+
+                // Rough type matching - in practice would use component IDs
+                const fromMatch = fromObj.userData.validationState === 'correct';
+                const toMatch = toObj.userData.validationState === 'correct';
+
+                if (fromMatch && toMatch) {
+                    const line = new THREE.Line(
+                        new THREE.BufferGeometry().setFromPoints([
+                            fromObj.position.clone(),
+                            toObj.position.clone()
+                        ]),
+                        new THREE.LineBasicMaterial({
+                            color,
+                            linewidth: 2,
+                            transparent: true,
+                            opacity: 0.6
+                        })
+                    );
+                    scene.add(line);
+                    wireLines.push(line);
+                }
+            });
+        });
+    });
+}
 
 // Component models (simple geometries for now)
 function createArduino() {
@@ -190,6 +382,7 @@ function createBreadboard() {
 function createLED(color = 0xff0000) {
     const group = new THREE.Group();
     group.userData.draggable = true;
+    group.userData.componentType = 'led';
 
     // LED bulb (dome)
     const bulb = new THREE.Mesh(
@@ -225,6 +418,7 @@ function createLED(color = 0xff0000) {
 function createResistor() {
     const group = new THREE.Group();
     group.userData.draggable = true;
+    group.userData.componentType = 'resistor';
 
     // Body (beige cylinder)
     const body = new THREE.Mesh(
@@ -264,6 +458,7 @@ function createResistor() {
 function createButton() {
     const group = new THREE.Group();
     group.userData.draggable = true;
+    group.userData.componentType = 'button';
 
     // Main button (black square)
     const button = new THREE.Mesh(
@@ -405,10 +600,12 @@ function createLesson2Scene() {
 
     const button = createButton();
     button.position.set(10, 1, -2);
+    button.userData.componentType = 'button';
     group.add(button);
 
     const pullDown = createResistor();
     pullDown.position.set(8, 2, -2);
+    pullDown.userData.componentType = 'pulldown';
     group.add(pullDown);
 
     return group;
@@ -436,6 +633,8 @@ function createLesson3Scene() {
     );
     sensor.position.set(4, 2, -2);
     sensor.castShadow = true;
+    sensor.userData.draggable = true;
+    sensor.userData.componentType = 'sensor';
     group.add(sensor);
 
     return group;
@@ -453,21 +652,27 @@ function createLesson4Scene() {
     group.add(breadboard);
 
     // LCD display (rectangle)
+    const lcdGroup = new THREE.Group();
+    lcdGroup.userData.draggable = true;
+    lcdGroup.userData.componentType = 'lcd';
+    lcdGroup.position.set(0, 3, 0);
+
     const lcdBody = new THREE.Mesh(
         new THREE.BoxGeometry(8, 0.5, 5),
         new THREE.MeshStandardMaterial({ color: 0x333333 })
     );
-    lcdBody.position.set(0, 3, 0);
     lcdBody.castShadow = true;
-    group.add(lcdBody);
+    lcdGroup.add(lcdBody);
 
     // LCD screen (dark display area)
     const screen = new THREE.Mesh(
         new THREE.BoxGeometry(7, 0.2, 4),
         new THREE.MeshStandardMaterial({ color: 0x001a00, emissiveIntensity: 0.1 })
     );
-    screen.position.set(0, 3.2, 0);
-    group.add(screen);
+    screen.position.set(0, 0.2, 0);
+    lcdGroup.add(screen);
+
+    group.add(lcdGroup);
 
     return group;
 }
@@ -507,6 +712,9 @@ function loadLesson(lessonNum) {
     controls.reset();
     camera.position.set(30, 25, 30);
     camera.lookAt(0, 0, 0);
+
+    // Initial validation
+    validatePositions();
 }
 
 // Animation loop
