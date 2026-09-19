@@ -383,10 +383,7 @@ function createBreadboard() {
 function createLED(color = 0xff0000) {
     const group = new THREE.Group();
     group.userData.draggable = true;
-<<<<<<< HEAD
     group.userData.componentType = 'led';
-=======
->>>>>>> origin/main
 
     // LED bulb (dome)
     const bulb = new THREE.Mesh(
@@ -422,10 +419,7 @@ function createLED(color = 0xff0000) {
 function createResistor() {
     const group = new THREE.Group();
     group.userData.draggable = true;
-<<<<<<< HEAD
     group.userData.componentType = 'resistor';
-=======
->>>>>>> origin/main
 
     // Body (beige cylinder)
     const body = new THREE.Mesh(
@@ -465,10 +459,7 @@ function createResistor() {
 function createButton() {
     const group = new THREE.Group();
     group.userData.draggable = true;
-<<<<<<< HEAD
     group.userData.componentType = 'button';
-=======
->>>>>>> origin/main
 
     // Main button (black square)
     const button = new THREE.Mesh(
