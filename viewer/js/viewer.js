@@ -12,7 +12,7 @@ camera.position.set(30, 25, 30);
 camera.lookAt(0, 0, 0);
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowShadowMap;
 
@@ -730,7 +730,7 @@ window.addEventListener('resize', () => {
     const height = canvas.clientHeight;
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
-    renderer.setSize(width, height);
+    renderer.setSize(width, height, false);
 });
 
 // Initialize
