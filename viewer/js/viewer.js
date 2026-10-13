@@ -661,7 +661,7 @@ const lessons = {
 // Draggable pieces start off their target in a staging row so there's
 // an actual puzzle to solve, instead of spawning already correct.
 function placeAtStaging(obj, index) {
-    obj.position.set(22, 2, -4 + index * 2.5);
+    obj.position.set(18, 2, -7 + index * 5);
 }
 
 function createLesson1Scene() {
