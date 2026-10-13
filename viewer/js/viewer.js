@@ -14,7 +14,7 @@ camera.lookAt(0, 0, 0);
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
 renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFShadowShadowMap;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
 // Orbit controls
 const controls = new THREE.OrbitControls(camera, canvas);
@@ -40,6 +40,11 @@ directionalLight.shadow.camera.right = 100;
 directionalLight.shadow.camera.top = 100;
 directionalLight.shadow.camera.bottom = -100;
 scene.add(directionalLight);
+
+// Soft fill light from the opposite side to lift shadow contrast
+const fillLight = new THREE.DirectionalLight(0xaaccff, 0.25);
+fillLight.position.set(-40, 20, -30);
+scene.add(fillLight);
 
 // Grid
 const gridHelper = new THREE.GridHelper(60, 60, 0x2d3748, 0x1a202c);
@@ -138,6 +143,8 @@ let currentLesson = 1;
 let currentScene = null;
 let wireLines = [];
 let validationOverlays = [];
+let hintOverlays = [];
+let hintsEnabled = false;
 
 // Tolerance for position matching (0.5 units = half grid cell)
 const POSITION_TOLERANCE = 1;
@@ -215,6 +222,52 @@ function validatePositions() {
 
     drawWires();
     updateValidationUI();
+    updateHints();
+}
+
+// Ghost outlines showing where each remaining component should go
+function updateHints() {
+    hintOverlays.forEach(h => scene.remove(h));
+    hintOverlays = [];
+
+    if (!hintsEnabled || !currentScene) return;
+
+    const correct = correctPositions[currentLesson];
+    if (!correct) return;
+
+    Object.entries(correct).forEach(([type, data]) => {
+        let alreadyCorrect = false;
+        currentScene.traverse((obj) => {
+            if (obj.userData.componentType === type && obj.userData.validationState === 'correct') {
+                alreadyCorrect = true;
+            }
+        });
+        if (alreadyCorrect) return;
+
+        const ghost = new THREE.Mesh(
+            new THREE.BoxGeometry(1.2, 1.2, 1.2),
+            new THREE.MeshBasicMaterial({
+                color: 0x38bdf8,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.4
+            })
+        );
+        ghost.position.copy(data.pos);
+        scene.add(ghost);
+        hintOverlays.push(ghost);
+    });
+}
+
+function toggleHints() {
+    hintsEnabled = !hintsEnabled;
+    const btn = document.getElementById('hint-toggle');
+    if (btn) btn.classList.toggle('active', hintsEnabled);
+    updateHints();
+}
+
+function resetLesson() {
+    loadLesson(currentLesson);
 }
 
 // Add visual overlay for validation
@@ -255,10 +308,11 @@ function updateValidationUI() {
 
     const validationDiv = document.getElementById('validation-status');
     if (validationDiv) {
+        const allCorrect = total > 0 && correct === total;
         validationDiv.innerHTML = `
-            <div style="padding: 8px; background: #0f172a; border: 1px solid #334155; border-radius: 4px; margin-top: 8px;">
+            <div class="validation-panel">
                 <strong>✓ Validation: ${correct}/${total} correct</strong>
-                ${correct === total ? '<span style="color: #00ff00;"> - All correct! ✨</span>' : ''}
+                ${allCorrect ? '<span class="all-correct"> — All correct! ✨</span>' : ''}
             </div>
         `;
     }
@@ -341,12 +395,36 @@ function createArduino() {
     board.receiveShadow = true;
     group.add(board);
 
-    // Pin headers (small cylinders)
+    // USB port
+    const usb = new THREE.Mesh(
+        new THREE.BoxGeometry(1.2, 0.5, 1),
+        new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.6, roughness: 0.4 })
+    );
+    usb.position.set(-3.3, 0.35, -2.3);
+    usb.castShadow = true;
+    group.add(usb);
+
+    // Power jack
+    const jack = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.35, 0.35, 0.6, 12),
+        new THREE.MeshStandardMaterial({ color: 0x111111 })
+    );
+    jack.rotation.z = Math.PI / 2;
+    jack.position.set(-3.3, 0.3, 1.8);
+    jack.castShadow = true;
+    group.add(jack);
+
+    // Pin headers (digital row + analog row)
     const pinMaterial = new THREE.MeshStandardMaterial({ color: 0xc0c0c0, metalness: 0.8 });
     for (let i = 0; i < 14; i++) {
         const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.5), pinMaterial);
-        pin.position.x = -3 + (i * 0.5);
-        pin.position.y = 0.25;
+        pin.position.set(-3 + i * 0.5, 0.25, -2.5);
+        pin.castShadow = true;
+        group.add(pin);
+    }
+    for (let i = 0; i < 6; i++) {
+        const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.5), pinMaterial);
+        pin.position.set(-1 + i * 0.5, 0.25, 2.5);
         pin.castShadow = true;
         group.add(pin);
     }
@@ -367,14 +445,28 @@ function createBreadboard() {
     body.receiveShadow = true;
     group.add(body);
 
-    // Hole grid indication (subtle texture)
-    const holeMaterial = new THREE.MeshStandardMaterial({
-        color: 0xd4c5a0,
-        roughness: 0.8
-    });
-    const holes = new THREE.Mesh(new THREE.BoxGeometry(16.5, 0.81, 6), holeMaterial);
-    holes.position.z = 0.01;
-    holes.castShadow = true;
+    // Simulated hole grid (instanced for performance)
+    const cols = 56;
+    const rows = 10;
+    const innerWidth = 16.2;
+    const innerDepth = 5.6;
+    const holeGeometry = new THREE.CylinderGeometry(0.04, 0.04, 0.1, 6);
+    const holeMaterial = new THREE.MeshStandardMaterial({ color: 0x3a3226, roughness: 0.9 });
+    const holes = new THREE.InstancedMesh(holeGeometry, holeMaterial, cols * rows);
+    const dummy = new THREE.Object3D();
+    let holeIndex = 0;
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            dummy.position.set(
+                -innerWidth / 2 + (c / (cols - 1)) * innerWidth,
+                0.41,
+                -innerDepth / 2 + (r / (rows - 1)) * innerDepth
+            );
+            dummy.updateMatrix();
+            holes.setMatrixAt(holeIndex++, dummy.matrix);
+        }
+    }
+    holes.instanceMatrix.needsUpdate = true;
     group.add(holes);
 
     return group;
@@ -387,18 +479,26 @@ function createLED(color = 0xff0000) {
 
     // LED bulb (dome)
     const bulb = new THREE.Mesh(
-        new THREE.SphereGeometry(0.35, 16, 16),
+        new THREE.SphereGeometry(0.35, 20, 20),
         new THREE.MeshStandardMaterial({
             color,
             emissive: color,
-            emissiveIntensity: 0.3,
-            metalness: 0.3,
-            roughness: 0.4
+            emissiveIntensity: 0.45,
+            metalness: 0.2,
+            roughness: 0.3
         })
     );
     bulb.position.y = 0.4;
     bulb.castShadow = true;
     group.add(bulb);
+
+    // Glossy highlight
+    const highlight = new THREE.Mesh(
+        new THREE.SphereGeometry(0.1, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 })
+    );
+    highlight.position.set(0.12, 0.55, 0.15);
+    group.add(highlight);
 
     // Leads (long wires)
     const leadMaterial = new THREE.MeshStandardMaterial({ color: 0x8b7500 });
@@ -558,6 +658,12 @@ const lessons = {
 };
 
 // Scene builders
+// Draggable pieces start off their target in a staging row so there's
+// an actual puzzle to solve, instead of spawning already correct.
+function placeAtStaging(obj, index) {
+    obj.position.set(22, 2, -4 + index * 2.5);
+}
+
 function createLesson1Scene() {
     const group = new THREE.Group();
 
@@ -570,11 +676,11 @@ function createLesson1Scene() {
     group.add(breadboard);
 
     const led = createLED(0xff0000);
-    led.position.set(8, 2, -2);
+    placeAtStaging(led, 0);
     group.add(led);
 
     const resistor = createResistor();
-    resistor.position.set(8, 2, 2);
+    placeAtStaging(resistor, 1);
     group.add(resistor);
 
     return group;
@@ -592,20 +698,20 @@ function createLesson2Scene() {
     group.add(breadboard);
 
     const led = createLED(0xff0000);
-    led.position.set(6, 2, 2);
+    placeAtStaging(led, 0);
     group.add(led);
 
     const resistor = createResistor();
-    resistor.position.set(8, 2, 2);
+    placeAtStaging(resistor, 1);
     group.add(resistor);
 
     const button = createButton();
-    button.position.set(10, 1, -2);
+    placeAtStaging(button, 2);
     button.userData.componentType = 'button';
     group.add(button);
 
     const pullDown = createResistor();
-    pullDown.position.set(8, 2, -2);
+    placeAtStaging(pullDown, 3);
     pullDown.userData.componentType = 'pulldown';
     group.add(pullDown);
 
@@ -624,7 +730,7 @@ function createLesson3Scene() {
     group.add(breadboard);
 
     const led = createLED(0xff6600);
-    led.position.set(8, 2, 2);
+    placeAtStaging(led, 0);
     group.add(led);
 
     // Sensor representation
@@ -632,7 +738,7 @@ function createLesson3Scene() {
         new THREE.SphereGeometry(0.4, 8, 8),
         new THREE.MeshStandardMaterial({ color: 0x9933ff })
     );
-    sensor.position.set(4, 2, -2);
+    placeAtStaging(sensor, 1);
     sensor.castShadow = true;
     sensor.userData.draggable = true;
     sensor.userData.componentType = 'sensor';
@@ -656,7 +762,7 @@ function createLesson4Scene() {
     const lcdGroup = new THREE.Group();
     lcdGroup.userData.draggable = true;
     lcdGroup.userData.componentType = 'lcd';
-    lcdGroup.position.set(0, 3, 0);
+    placeAtStaging(lcdGroup, 0);
 
     const lcdBody = new THREE.Mesh(
         new THREE.BoxGeometry(8, 0.5, 5),
@@ -714,8 +820,28 @@ function loadLesson(lessonNum) {
     camera.position.set(30, 25, 30);
     camera.lookAt(0, 0, 0);
 
+    // Keep the URL shareable/bookmarkable
+    const params = new URLSearchParams(window.location.search);
+    params.set('lesson', lessonNum);
+    history.replaceState(null, '', '?' + params.toString());
+
     // Initial validation
     validatePositions();
+}
+
+function copyLessonLink() {
+    const url = window.location.origin + window.location.pathname + '?lesson=' + currentLesson;
+    const btn = document.getElementById('copy-link');
+
+    navigator.clipboard.writeText(url).then(() => {
+        if (btn) {
+            const original = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => { btn.textContent = original; }, 1500);
+        }
+    }).catch(() => {
+        if (btn) btn.textContent = 'Copy failed';
+    });
 }
 
 function animate() {
@@ -733,6 +859,8 @@ window.addEventListener('resize', () => {
     renderer.setSize(width, height, false);
 });
 
-// Initialize
-loadLesson(1);
+// Initialize — honor ?lesson=N from a shared link, default to Lesson 1
+const requestedLesson = parseInt(new URLSearchParams(window.location.search).get('lesson'), 10);
+const initialLesson = lessons[requestedLesson] ? requestedLesson : 1;
+loadLesson(initialLesson);
 animate();

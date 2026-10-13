@@ -4,15 +4,16 @@ Interactive 3D visualization of all four lesson circuits, built with Three.js.
 
 ## Overview
 
-This viewer provides a **passive 3D view** of each lesson's breadboard circuit, allowing students to:
+This viewer turns each lesson's breadboard circuit into a **drag-and-drop puzzle**: components spawn off to the side in a staging row, and the student drags each one into its correct spot on the breadboard, with live feedback as they go.
 - Rotate, zoom, and pan the circuit layout
-- See component placement and orientation
-- Understand spatial relationships between parts
-- Switch between all 4 lessons instantly
+- Drag components into place with real-time correct/incorrect feedback
+- Get stuck? Toggle hints to see where each piece belongs
+- Reset a lesson to try again, or share a direct link to it
+- Switch between all 4 lessons instantly, on desktop or phone
 
 ## Features
 
-### Current (v3.0 - Validated & Interactive)
+### Current (v4.0 - Puzzle Mode)
 - ✅ 3D geometry models for all components (Arduino, breadboard, LEDs, resistors, buttons, LCD)
 - ✅ All 4 lesson scenes
 - ✅ Orbit camera controls (rotate, zoom, pan)
@@ -24,8 +25,13 @@ This viewer provides a **passive 3D view** of each lesson's breadboard circuit, 
 - ✅ **Validation status UI** - shows real-time correctness count (Phase 3)
 - ✅ **Wire visualization** - draws connections between correctly placed components (Phase 3)
 - ✅ **Bounding box outlines** - visual feedback for validation state (Phase 3)
+- ✅ **Scrambled starting layout** - components start in a staging row, not pre-solved (Phase 4)
+- ✅ **Reset button** - restage all components to try the lesson again (Phase 4)
+- ✅ **Hint toggle** - ghost outlines show where unsolved components belong (Phase 4)
+- ✅ **Shareable lesson links** - `?lesson=N` loads directly into that lesson, with a one-click copy-link button (Phase 4)
+- ✅ **Responsive mobile layout** - canvas stacks above a scrollable sidebar under 700px (Phase 4)
 
-### Planned (v4.0 - Advanced)
+### Planned (v5.0 - Advanced)
 - 🔲 Connection point snapping (snap to connection points when nearby)
 - 🔲 Click component → highlight wiring path
 - 🔲 Wire connections manually (teaching mode)
@@ -48,13 +54,16 @@ python3 -m http.server 8000
 ```
 
 ### Controls
-- **Left Mouse Drag on Component**: Drag component to place (snaps to 0.5-unit grid)
+- **Left Mouse Drag on Component**: Drag component from the staging row to its spot (snaps to 0.5-unit grid)
 - **Left Mouse Drag on Canvas**: Rotate view
 - **Scroll**: Zoom in/out
 - **Right Mouse Drag**: Pan the camera
 - **Auto-rotate**: Enabled by default (disabled while dragging)
 - **Lesson buttons**: Switch between 4 lessons
-- **Validation Status**: Shows below controls - displays correct/total components
+- **Reset**: Restage every component for the current lesson
+- **Hints**: Toggle ghost outlines showing where unsolved pieces belong
+- **Copy Link**: Copy a `?lesson=N` URL that opens directly into the current lesson
+- **Validation Status**: Shows below the action buttons - displays correct/total components
 
 ## Project Structure
 
@@ -79,8 +88,8 @@ Each component is built from basic Three.js geometries:
 
 | Component | Geometry | Details |
 |-----------|----------|---------|
-| Arduino Uno | Box + cylinders | Blue PCB, silver pin headers |
-| Breadboard | Box | Beige plastic, 830 holes |
+| Arduino Uno | Box + cylinders | Blue PCB, USB port, power jack, two pin header rows |
+| Breadboard | Box + instanced cylinders | Beige plastic, 560-hole instanced grid |
 | LED | Sphere + cylinders | Colored bulb, two leads |
 | Resistor | Cylinder + bands | Tan body, color bands |
 | Button | Box | Black plastic, 4 leads |
@@ -114,14 +123,20 @@ Each component is built from basic Three.js geometries:
 - Enables smart matching for validation and wire drawing
 - Extensible for future component types
 
+### Puzzle Mode (Phase 4)
+- Each lesson's draggable components spawn in a staging row beside the breadboard, not at their solved position
+- **Reset**: rebuilds the current lesson from scratch, which re-stages every component
+- **Hints**: for each target position not yet occupied by a correctly-placed component, draws a translucent cyan wireframe ghost at that spot; hints update automatically after every drag
+- **Shareable links**: the URL's `?lesson=N` is read on load and kept in sync via `history.replaceState` as lessons change, so the address bar and the Copy Link button always match the lesson on screen
+
 ## Future Enhancements
 
-### Phase 4 (Connection Snapping)
+### Phase 5 (Connection Snapping)
 - Snap to connection points when dragging nearby
 - Show connection point indicators
 - Force correct orientation/alignment
 
-### Phase 5 (Advanced)
+### Phase 6 (Advanced)
 - Real GLTF models from Sketchfab/Thingiverse
 - Animation (wire tracing, LED blinking)
 - Multi-angle breakdown views
