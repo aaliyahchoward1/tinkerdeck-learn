@@ -4,16 +4,18 @@ Interactive 3D visualization of all four lesson circuits, built with Three.js.
 
 ## Overview
 
-This viewer turns each lesson's breadboard circuit into a **drag-and-drop puzzle**: components spawn off to the side in a staging row, and the student drags each one into its correct spot on the breadboard, with live feedback as they go.
+This viewer turns each lesson's breadboard circuit into a **drag-and-drop puzzle**: components spawn off to the side in a staging row, and the student drags each one into its correct spot on the breadboard, with live feedback as they go. It's built around the three things most beginners actually get stuck on first: **which holes are electrically connected**, **which way a part needs to face**, and **getting a part into the exact hole**, not just "roughly near it."
 - Rotate, zoom, and pan the circuit layout
-- Drag components into place with real-time correct/incorrect feedback
+- Drag components into place with real-time correct/incorrect feedback, requiring the exact hole
+- Hover the breadboard to see which holes are the same electrical connection
+- Place a polarized part backwards and it tells you — click it to flip
 - Get stuck? Toggle hints to see where each piece belongs
 - Reset a lesson to try again, or share a direct link to it
 - Switch between all 4 lessons instantly, on desktop or phone
 
 ## Features
 
-### Current (v4.0 - Puzzle Mode)
+### Current (v5.0 - Breadboard Literacy)
 - ✅ 3D geometry models for all components (Arduino, breadboard, LEDs, resistors, buttons, LCD)
 - ✅ All 4 lesson scenes
 - ✅ Orbit camera controls (rotate, zoom, pan)
@@ -30,8 +32,11 @@ This viewer turns each lesson's breadboard circuit into a **drag-and-drop puzzle
 - ✅ **Hint toggle** - ghost outlines show where unsolved components belong (Phase 4)
 - ✅ **Shareable lesson links** - `?lesson=N` loads directly into that lesson, with a one-click copy-link button (Phase 4)
 - ✅ **Responsive mobile layout** - canvas stacks above a scrollable sidebar under 700px (Phase 4)
+- ✅ **Breadboard electrical model** - power rails and terminal-strip columns, with hover highlighting showing which holes are the same connection (Phase 5)
+- ✅ **Component polarity** - LEDs have a real long-leg/short-leg visual cue, a required orientation, and click-to-flip (Phase 5)
+- ✅ **Tighter placement tolerance** - requires the exact hole, not just the neighborhood (Phase 5)
 
-### Planned (v5.0 - Advanced)
+### Planned (v6.0 - Advanced)
 - 🔲 Connection point snapping (snap to connection points when nearby)
 - 🔲 Click component → highlight wiring path
 - 🔲 Wire connections manually (teaching mode)
@@ -54,7 +59,8 @@ python3 -m http.server 8000
 ```
 
 ### Controls
-- **Left Mouse Drag on Component**: Drag component from the staging row to its spot (snaps to 0.5-unit grid)
+- **Left Mouse Drag on Component**: Drag component from the staging row to its spot (snaps to 0.5-unit grid, must land on the exact hole)
+- **Click a polarized component (no drag)**: Flip it 180° — LEDs need the right orientation, not just the right spot
 - **Left Mouse Drag on Canvas**: Rotate view
 - **Scroll**: Zoom in/out
 - **Right Mouse Drag**: Pan the camera
@@ -62,8 +68,9 @@ python3 -m http.server 8000
 - **Lesson buttons**: Switch between 4 lessons
 - **Reset**: Restage every component for the current lesson
 - **Hints**: Toggle ghost outlines showing where unsolved pieces belong
+- **Holes**: Toggle breadboard connectivity mode, then hover any hole to see every other hole it's electrically connected to
 - **Copy Link**: Copy a `?lesson=N` URL that opens directly into the current lesson
-- **Validation Status**: Shows below the action buttons - displays correct/total components
+- **Validation Status**: Shows below the action buttons - displays correct/total components, plus a note when a part is in the right spot but facing the wrong way
 
 ## Project Structure
 
@@ -89,8 +96,8 @@ Each component is built from basic Three.js geometries:
 | Component | Geometry | Details |
 |-----------|----------|---------|
 | Arduino Uno | Box + cylinders | Blue PCB, USB port, power jack, two pin header rows |
-| Breadboard | Box + instanced cylinders | Beige plastic, 560-hole instanced grid |
-| LED | Sphere + cylinders | Colored bulb, two leads |
+| Breadboard | Box + instanced cylinders | Beige plastic, 560-hole terminal-strip grid, two full-length power rails (printed red/blue), center divider |
+| LED | Sphere + cylinders | Colored bulb, long leg (anode) and short leg (cathode) — the real polarity cue |
 | Resistor | Cylinder + bands | Tan body, color bands |
 | Button | Box | Black plastic, 4 leads |
 | LCD 16x2 | Box | Dark display, I2C module |
@@ -104,11 +111,12 @@ Each component is built from basic Three.js geometries:
 
 ## Implementation Details
 
-### Validation System (Phase 3)
+### Validation System (Phase 3, tightened Phase 5)
 - **Position Matching**: Each lesson defines expected component positions
-- **Tolerance**: Components within 1 unit of expected position = correct
+- **Tolerance**: Components within 0.3 units of expected position = correct — tighter than the 0.5-unit grid snap, so landing one hole over from the correct one does not validate as correct
 - **Visual Feedback**: 
   - Green wireframe outline = correct placement
+  - Orange wireframe outline = right spot, wrong orientation (Phase 5)
   - Red wireframe outline = incorrect placement
 - **Real-time Updates**: Validation runs after each drag operation
 
@@ -129,14 +137,24 @@ Each component is built from basic Three.js geometries:
 - **Hints**: for each target position not yet occupied by a correctly-placed component, draws a translucent cyan wireframe ghost at that spot; hints update automatically after every drag
 - **Shareable links**: the URL's `?lesson=N` is read on load and kept in sync via `history.replaceState` as lessons change, so the address bar and the Copy Link button always match the lesson on screen
 
+### Breadboard Electrical Model (Phase 5)
+- The breadboard's hole grid is backed by a real electrical model, not just decoration: terminal-strip holes are grouped into columns of 5 (one node each, split into a top and bottom half by the center divider), and two power rails each run the full length of the board as a single node
+- Toggling **Holes** turns on a raycast against the breadboard's hole plane on every mouse move; whichever node is under the cursor gets its exact holes highlighted with markers, and a sidebar line names it (e.g. "Column 14, bottom half — these 5 holes are one connection")
+- This is implemented as a pool of reusable marker meshes repositioned per frame, not per-instance recoloring, since the pinned Three.js r128 build predates `InstancedMesh.setColorAt`
+
+### Component Polarity (Phase 5)
+- LEDs are tagged `requiresOrientation: true` and carry a target `rot` (rotation.y) per lesson in `correctPositions`
+- Clicking a part (a mousedown/mouseup with negligible pointer movement, as opposed to a drag) flips it 180° around Y
+- `validatePositions()` checks orientation only after position already matches: right spot + right orientation = correct (green), right spot + wrong orientation = a distinct `wrong-orientation` state (orange), surfaced in both the 3D outline color and a line in the validation panel
+
 ## Future Enhancements
 
-### Phase 5 (Connection Snapping)
+### Phase 6 (Connection Snapping)
 - Snap to connection points when dragging nearby
 - Show connection point indicators
-- Force correct orientation/alignment
+- Force correct orientation/alignment automatically on drop
 
-### Phase 6 (Advanced)
+### Phase 7 (Advanced)
 - Real GLTF models from Sketchfab/Thingiverse
 - Animation (wire tracing, LED blinking)
 - Multi-angle breakdown views

@@ -57,6 +57,7 @@ const mouse = new THREE.Vector2();
 let draggingObject = null;
 let draggingPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 let draggingOffset = new THREE.Vector3();
+let draggingStartY = 0;
 const dragPoint = new THREE.Vector3();
 
 // Disable orbit controls while dragging
@@ -96,6 +97,7 @@ canvas.addEventListener('mousedown', (event) => {
                 // Calculate offset from drag point to object center
                 raycaster.ray.intersectPlane(draggingPlane, dragPoint);
                 draggingOffset.copy(draggingObject.position).sub(dragPoint);
+                draggingStartY = draggingObject.position.y;
 
                 // Visual feedback
                 draggingObject.userData.originalScale = draggingObject.scale.clone();
@@ -115,18 +117,30 @@ canvas.addEventListener('mousemove', (event) => {
     raycaster.setFromCamera(mouse, camera);
     raycaster.ray.intersectPlane(draggingPlane, dragPoint);
 
-    // Snap to grid (0.5 unit increments on XZ plane, keep Y fixed at 2)
+    // Snap to grid (0.5 unit increments on XZ plane). Y stays fixed at the
+    // height the object was grabbed at — only X/Z follow the cursor, offset
+    // by where on the object it was grabbed (draggingOffset.x/z).
     const snapped = new THREE.Vector3(
-        Math.round(dragPoint.x * 2) / 2,
-        draggingObject.position.y,
-        Math.round(dragPoint.z * 2) / 2
-    ).add(draggingOffset);
+        Math.round(dragPoint.x * 2) / 2 + draggingOffset.x,
+        draggingStartY,
+        Math.round(dragPoint.z * 2) / 2 + draggingOffset.z
+    );
 
     draggingObject.position.copy(snapped);
 });
 
-canvas.addEventListener('mouseup', () => {
+// Track whether the pointer moved enough to count as a drag vs. a click
+let mouseDownPos = null;
+canvas.addEventListener('mousedown', (event) => {
+    mouseDownPos = { x: event.clientX, y: event.clientY };
+});
+
+canvas.addEventListener('mouseup', (event) => {
     if (draggingObject) {
+        const wasClick = mouseDownPos &&
+            Math.abs(event.clientX - mouseDownPos.x) < 4 &&
+            Math.abs(event.clientY - mouseDownPos.y) < 4;
+
         controls.enableRotate = true;
 
         // Restore scale
@@ -134,9 +148,151 @@ canvas.addEventListener('mouseup', () => {
             draggingObject.scale.copy(draggingObject.userData.originalScale);
         }
 
+        // A click (no drag movement) on a polarized part flips it 180°
+        if (wasClick && draggingObject.userData.requiresOrientation) {
+            draggingObject.rotation.y += Math.PI;
+        }
+
         validatePositions();
         draggingObject = null;
     }
+});
+
+// Breadboard electrical model: which holes are the same node.
+// Matches createBreadboard()'s hole layout below.
+const BB_COLS = 56;
+const BB_INNER_WIDTH = 16.2;
+const BB_INNER_DEPTH = 5.6;
+const BB_RAIL_OFFSET = 3.7;
+const BB_HOLE_Y = 0.41;
+
+function buildColumnHoles(colX, half) {
+    const rowsPerHalf = 5;
+    const holes = [];
+    for (let r = 0; r < rowsPerHalf; r++) {
+        const z = half === 'bottom'
+            ? -BB_INNER_DEPTH / 2 + (r / 9) * BB_INNER_DEPTH
+            : (BB_INNER_DEPTH / 2) - ((rowsPerHalf - 1 - r) / 9) * BB_INNER_DEPTH;
+        holes.push(new THREE.Vector3(colX, BB_HOLE_Y, z));
+    }
+    return holes;
+}
+
+function buildRailHoles(z) {
+    const holes = [];
+    const colSpacing = BB_INNER_WIDTH / (BB_COLS - 1);
+    for (let c = 0; c < BB_COLS; c++) {
+        holes.push(new THREE.Vector3(-BB_INNER_WIDTH / 2 + c * colSpacing, BB_HOLE_Y, z));
+    }
+    return holes;
+}
+
+// Given a point in the breadboard's LOCAL space, return the electrical
+// node (group of holes that are all the same connection) under it, or
+// null if the point isn't over any hole region.
+function getBreadboardNode(localX, localZ) {
+    const halfW = BB_INNER_WIDTH / 2;
+    if (localX < -halfW - 0.3 || localX > halfW + 0.3) return null;
+
+    const colSpacing = BB_INNER_WIDTH / (BB_COLS - 1);
+    const col = Math.round((localX + halfW) / colSpacing);
+    if (col < 0 || col >= BB_COLS) return null;
+    const colX = -halfW + col * colSpacing;
+
+    const railTolerance = 0.6;
+    if (Math.abs(localZ - BB_RAIL_OFFSET) < railTolerance) {
+        return { label: 'Power rail (+) — one connection, full length', holes: buildRailHoles(BB_RAIL_OFFSET) };
+    }
+    if (Math.abs(localZ + BB_RAIL_OFFSET) < railTolerance) {
+        return { label: 'Power rail (−) — one connection, full length', holes: buildRailHoles(-BB_RAIL_OFFSET) };
+    }
+
+    const halfD = BB_INNER_DEPTH / 2;
+    if (localZ < -halfD - 0.3 || localZ > halfD + 0.3) return null;
+
+    const half = localZ >= 0 ? 'top' : 'bottom';
+    return {
+        label: `Column ${col + 1}, ${half} half — these 5 holes are one connection`,
+        holes: buildColumnHoles(colX, half)
+    };
+}
+
+// Reusable pool of highlight markers for the hovered node (avoids
+// allocating new meshes every mousemove)
+const MAX_HIGHLIGHT_MARKERS = BB_COLS;
+const connectionHighlightMarkers = [];
+for (let i = 0; i < MAX_HIGHLIGHT_MARKERS; i++) {
+    const marker = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.09, 0.09, 0.2, 8),
+        new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0.9 })
+    );
+    marker.visible = false;
+    scene.add(marker);
+    connectionHighlightMarkers.push(marker);
+}
+
+let connectionsEnabled = false;
+const connectionPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -BB_HOLE_Y);
+const connectionPoint = new THREE.Vector3();
+const connectionMouse = new THREE.Vector2();
+const connectionRaycaster = new THREE.Raycaster();
+
+function hideConnectionHighlight() {
+    connectionHighlightMarkers.forEach(m => m.visible = false);
+    const info = document.getElementById('connection-info');
+    if (info) info.textContent = '';
+}
+
+function toggleConnections() {
+    connectionsEnabled = !connectionsEnabled;
+    const btn = document.getElementById('connections-toggle');
+    if (btn) btn.classList.toggle('active', connectionsEnabled);
+    if (!connectionsEnabled) hideConnectionHighlight();
+}
+
+canvas.addEventListener('mousemove', (event) => {
+    if (!connectionsEnabled || !currentScene) return;
+
+    let breadboard = null;
+    currentScene.traverse((obj) => {
+        if (obj.userData.isBreadboard) breadboard = obj;
+    });
+    if (!breadboard) return;
+
+    const rect = canvas.getBoundingClientRect();
+    connectionMouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    connectionMouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    connectionRaycaster.setFromCamera(connectionMouse, camera);
+    if (!connectionRaycaster.ray.intersectPlane(connectionPlane, connectionPoint)) {
+        hideConnectionHighlight();
+        return;
+    }
+
+    const localX = connectionPoint.x - breadboard.position.x;
+    const localZ = connectionPoint.z - breadboard.position.z;
+    const node = getBreadboardNode(localX, localZ);
+
+    if (!node) {
+        hideConnectionHighlight();
+        return;
+    }
+
+    node.holes.forEach((hole, i) => {
+        const marker = connectionHighlightMarkers[i];
+        marker.position.set(
+            breadboard.position.x + hole.x,
+            breadboard.position.y + hole.y + 0.05,
+            breadboard.position.z + hole.z
+        );
+        marker.visible = true;
+    });
+    for (let i = node.holes.length; i < connectionHighlightMarkers.length; i++) {
+        connectionHighlightMarkers[i].visible = false;
+    }
+
+    const info = document.getElementById('connection-info');
+    if (info) info.textContent = node.label;
 });
 
 let currentLesson = 1;
@@ -146,29 +302,45 @@ let validationOverlays = [];
 let hintOverlays = [];
 let hintsEnabled = false;
 
-// Tolerance for position matching (0.5 units = half grid cell)
-const POSITION_TOLERANCE = 1;
+// Tolerance for position matching. Components snap to a 0.5-unit grid,
+// so this must be tighter than one grid cell (0.5) — otherwise landing
+// one hole over from the correct one would still validate as correct,
+// which defeats the point of teaching precise hole placement.
+const POSITION_TOLERANCE = 0.3;
 
 // Component connection points and correct positions per lesson
 const correctPositions = {
     1: { // Lesson 1: Blink
-        'led': { pos: new THREE.Vector3(8, 2, -2), name: 'Red LED' },
+        'led': { pos: new THREE.Vector3(8, 2, -2), name: 'Red LED', rot: 0 },
         'resistor': { pos: new THREE.Vector3(8, 2, 2), name: '220Ω Resistor' }
     },
     2: { // Lesson 2: Button Input
-        'led': { pos: new THREE.Vector3(6, 2, 2), name: 'Red LED' },
+        'led': { pos: new THREE.Vector3(6, 2, 2), name: 'Red LED', rot: 0 },
         'resistor': { pos: new THREE.Vector3(8, 2, 2), name: '220Ω Resistor' },
         'button': { pos: new THREE.Vector3(10, 1, -2), name: 'Button' },
         'pulldown': { pos: new THREE.Vector3(8, 2, -2), name: '10kΩ Pull-down' }
     },
     3: { // Lesson 3: Sensor
-        'led': { pos: new THREE.Vector3(8, 2, 2), name: 'Orange LED' },
+        'led': { pos: new THREE.Vector3(8, 2, 2), name: 'Orange LED', rot: 0 },
         'sensor': { pos: new THREE.Vector3(4, 2, -2), name: 'Analog Sensor' }
     },
     4: { // Lesson 4: LCD Display
         'lcd': { pos: new THREE.Vector3(0, 3, 0), name: 'LCD Display' }
     }
 };
+
+// Keep an angle in [0, 2π) so rotation comparisons don't need to
+// special-case negative values or multiples wrapping around.
+function normalizeAngle(angle) {
+    const twoPi = Math.PI * 2;
+    return ((angle % twoPi) + twoPi) % twoPi;
+}
+
+function orientationMatches(obj, targetRot) {
+    if (targetRot === undefined) return true;
+    const diff = Math.abs(normalizeAngle(obj.rotation.y) - normalizeAngle(targetRot));
+    return diff < 0.3 || diff > Math.PI * 2 - 0.3;
+}
 
 // Component type identification
 function getComponentType(obj) {
@@ -205,8 +377,13 @@ function validatePositions() {
             const distance = objPos.distanceTo(expectedPos);
 
             if (distance < POSITION_TOLERANCE) {
-                validationState = 'correct';
-                addValidationOverlay(obj, 'correct');
+                if (orientationMatches(obj, data.rot)) {
+                    validationState = 'correct';
+                    addValidationOverlay(obj, 'correct');
+                } else {
+                    validationState = 'wrong-orientation';
+                    addValidationOverlay(obj, 'wrong-orientation');
+                }
                 break;
             } else if (distance < POSITION_TOLERANCE * 3) {
                 validationState = 'close';
@@ -272,7 +449,9 @@ function resetLesson() {
 
 // Add visual overlay for validation
 function addValidationOverlay(obj, state) {
-    const outlineColor = state === 'correct' ? 0x00ff00 : 0xff4444;
+    const outlineColor = state === 'correct' ? 0x00ff00
+        : state === 'wrong-orientation' ? 0xffaa00
+        : 0xff4444;
 
     // Create a bounding box for the object
     const box = new THREE.Box3().setFromObject(obj);
@@ -299,11 +478,13 @@ function addValidationOverlay(obj, state) {
 function updateValidationUI() {
     let correct = 0;
     let total = 0;
+    let wrongOrientation = 0;
 
     currentScene.traverse((obj) => {
         if (!obj.userData.draggable) return;
         total++;
         if (obj.userData.validationState === 'correct') correct++;
+        if (obj.userData.validationState === 'wrong-orientation') wrongOrientation++;
     });
 
     const validationDiv = document.getElementById('validation-status');
@@ -313,6 +494,7 @@ function updateValidationUI() {
             <div class="validation-panel">
                 <strong>✓ Validation: ${correct}/${total} correct</strong>
                 ${allCorrect ? '<span class="all-correct"> — All correct! ✨</span>' : ''}
+                ${wrongOrientation > 0 ? `<div class="orientation-note">🔶 Right spot, wrong way around — click it to flip</div>` : ''}
             </div>
         `;
     }
@@ -435,32 +617,40 @@ function createArduino() {
 
 function createBreadboard() {
     const group = new THREE.Group();
+    group.userData.isBreadboard = true;
 
-    // Main body (beige)
+    // Main body (beige) — widened to fit the power rails outside the
+    // terminal-strip area, same as a real breadboard's layout
     const body = new THREE.Mesh(
-        new THREE.BoxGeometry(17, 0.8, 6.5),
+        new THREE.BoxGeometry(17, 0.8, 9.5),
         new THREE.MeshStandardMaterial({ color: 0xf5deb3 })
     );
     body.castShadow = true;
     body.receiveShadow = true;
     group.add(body);
 
-    // Simulated hole grid (instanced for performance)
-    const cols = 56;
-    const rows = 10;
-    const innerWidth = 16.2;
-    const innerDepth = 5.6;
+    // Center divider groove — marks the gap between the top and bottom
+    // terminal-strip halves, which are NOT electrically connected
+    const divider = new THREE.Mesh(
+        new THREE.BoxGeometry(16.5, 0.05, 0.15),
+        new THREE.MeshStandardMaterial({ color: 0xc9b88a })
+    );
+    divider.position.y = 0.41;
+    group.add(divider);
+
+    // Terminal strip holes (two 5-row halves). Each column of 5 holes is
+    // one electrical node; neighboring columns are NOT connected.
     const holeGeometry = new THREE.CylinderGeometry(0.04, 0.04, 0.1, 6);
     const holeMaterial = new THREE.MeshStandardMaterial({ color: 0x3a3226, roughness: 0.9 });
-    const holes = new THREE.InstancedMesh(holeGeometry, holeMaterial, cols * rows);
+    const holes = new THREE.InstancedMesh(holeGeometry, holeMaterial, BB_COLS * 10);
     const dummy = new THREE.Object3D();
     let holeIndex = 0;
-    for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
+    for (let r = 0; r < 10; r++) {
+        for (let c = 0; c < BB_COLS; c++) {
             dummy.position.set(
-                -innerWidth / 2 + (c / (cols - 1)) * innerWidth,
-                0.41,
-                -innerDepth / 2 + (r / (rows - 1)) * innerDepth
+                -BB_INNER_WIDTH / 2 + (c / (BB_COLS - 1)) * BB_INNER_WIDTH,
+                BB_HOLE_Y,
+                -BB_INNER_DEPTH / 2 + (r / 9) * BB_INNER_DEPTH
             );
             dummy.updateMatrix();
             holes.setMatrixAt(holeIndex++, dummy.matrix);
@@ -469,6 +659,38 @@ function createBreadboard() {
     holes.instanceMatrix.needsUpdate = true;
     group.add(holes);
 
+    // Power rails: each one runs the FULL length of the board as a
+    // single electrical node, unlike the terminal strip's short columns.
+    // Real breadboards print these red (+) and blue (−) so the polarity
+    // is visible at a glance — we match that convention.
+    const railGeometry = new THREE.CylinderGeometry(0.045, 0.045, 0.1, 6);
+    const plusMaterial = new THREE.MeshStandardMaterial({ color: 0xdd4444, roughness: 0.7 });
+    const minusMaterial = new THREE.MeshStandardMaterial({ color: 0x4477dd, roughness: 0.7 });
+
+    [[BB_RAIL_OFFSET, plusMaterial], [-BB_RAIL_OFFSET, minusMaterial]].forEach(([z, material]) => {
+        const rail = new THREE.InstancedMesh(railGeometry, material, BB_COLS);
+        for (let c = 0; c < BB_COLS; c++) {
+            dummy.position.set(
+                -BB_INNER_WIDTH / 2 + (c / (BB_COLS - 1)) * BB_INNER_WIDTH,
+                BB_HOLE_Y,
+                z
+            );
+            dummy.updateMatrix();
+            rail.setMatrixAt(c, dummy.matrix);
+        }
+        rail.instanceMatrix.needsUpdate = true;
+        group.add(rail);
+    });
+
+    // Printed rail stripes (the red/blue lines real breadboards have)
+    const stripeGeometry = new THREE.BoxGeometry(16.6, 0.02, 0.3);
+    const plusStripe = new THREE.Mesh(stripeGeometry, new THREE.MeshStandardMaterial({ color: 0xcc3333 }));
+    plusStripe.position.set(0, 0.405, BB_RAIL_OFFSET);
+    group.add(plusStripe);
+    const minusStripe = new THREE.Mesh(stripeGeometry, new THREE.MeshStandardMaterial({ color: 0x3355cc }));
+    minusStripe.position.set(0, 0.405, -BB_RAIL_OFFSET);
+    group.add(minusStripe);
+
     return group;
 }
 
@@ -476,6 +698,7 @@ function createLED(color = 0xff0000) {
     const group = new THREE.Group();
     group.userData.draggable = true;
     group.userData.componentType = 'led';
+    group.userData.requiresOrientation = true;
 
     // LED bulb (dome)
     const bulb = new THREE.Mesh(
@@ -500,16 +723,18 @@ function createLED(color = 0xff0000) {
     highlight.position.set(0.12, 0.55, 0.15);
     group.add(highlight);
 
-    // Leads (long wires)
+    // Leads — deliberately different lengths, matching the real-world
+    // polarity cue: the long leg is the anode (+), the short leg is the
+    // cathode (−). Both leads start at the same point near the bulb base.
     const leadMaterial = new THREE.MeshStandardMaterial({ color: 0x8b7500 });
-    const lead1 = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3), leadMaterial);
-    lead1.position.y = -1;
+    const lead1 = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3.2), leadMaterial);
+    lead1.position.y = -1.5;
     lead1.castShadow = true;
     group.add(lead1);
 
-    const lead2 = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3), leadMaterial);
+    const lead2 = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.8), leadMaterial);
     lead2.position.x = 0.3;
-    lead2.position.y = -1;
+    lead2.position.y = -0.8;
     lead2.castShadow = true;
     group.add(lead2);
 

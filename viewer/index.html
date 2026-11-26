@@ -140,12 +140,13 @@
 
         .action-buttons {
             display: flex;
+            flex-wrap: wrap;
             gap: 8px;
             margin-top: 12px;
         }
 
         .action-buttons button {
-            flex: 1;
+            flex: 1 1 calc(50% - 4px);
             padding: 8px 6px;
             background: #273449;
             border: 1px solid #475569;
@@ -167,6 +168,13 @@
             color: #0f172a;
         }
 
+        .connection-info {
+            min-height: 18px;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #38bdf8;
+        }
+
         .validation-panel {
             padding: 10px 12px;
             background: #0f172a;
@@ -178,6 +186,12 @@
 
         .validation-panel .all-correct {
             color: #22c55e;
+        }
+
+        .validation-panel .orientation-note {
+            margin-top: 6px;
+            color: #fbbf24;
+            font-size: 12px;
         }
     </style>
 </head>
@@ -200,15 +214,18 @@
 
             <div class="controls">
                 <p><strong>Controls:</strong></p>
-                <p>🖱️ <strong>Drag components</strong> from the staging row into place<br>Scroll to zoom · Right-drag to pan</p>
-                <p><small>Snaps to a 0.5-unit grid. Green outline = correct, red = needs adjusting.</small></p>
+                <p>🖱️ <strong>Drag components</strong> from the staging row into place · click a part to flip it<br>Scroll to zoom · Right-drag to pan</p>
+                <p><small>Snaps to a 0.5-unit grid, so you need the exact hole. Green outline = correct, orange = right spot but flipped, red = needs adjusting.</small></p>
             </div>
 
             <div class="action-buttons">
                 <button onclick="resetLesson()" title="Put all components back in the staging row">↺ Reset</button>
                 <button id="hint-toggle" onclick="toggleHints()" title="Show where each piece belongs">💡 Hints</button>
+                <button id="connections-toggle" onclick="toggleConnections()" title="Hover the breadboard to see which holes are electrically connected">🔌 Holes</button>
                 <button id="copy-link" onclick="copyLessonLink()" title="Copy a link to this lesson">🔗 Copy</button>
             </div>
+
+            <div id="connection-info" class="connection-info"></div>
 
             <div id="validation-status"></div>
 
